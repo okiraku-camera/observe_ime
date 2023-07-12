@@ -1,15 +1,20 @@
+// observe_ime.h Copyright (c) 2018 Takeshi Higasa, okiraku-camera.tokyo
+//
+// This software is released under the MIT License.
+// http://opensource.org/licenses/mit-license.php
+//
+// The USB mass storage class (MSC) support.
+//
+
 #include "stdafx.h"
 #include "hoboMSC.h"
 
-//
-// hoboNicola msc support.
-//
 static const TCHAR* hoboNiocola_filename = _T("HOBONICO.BIN");
 static const int volume_label_buffer_length = 12;
 typedef struct {
 	DWORD sectorsPerCluster;
 	DWORD bytesPerSector;
-	DWORD numberOfFreeClusters; // ‚±‚Ì€–Ú‚ð•]‰¿‚·‚é‚Ì‚Í‚â‚ß‚éB
+	DWORD numberOfFreeClusters; // ã“ã®é …ç›®ã‚’è©•ä¾¡ã™ã‚‹ã®ã¯ã‚„ã‚ã‚‹ã€‚
 	DWORD totalNumberOfClusters;
 	DWORD volumeSerial;
 	TCHAR volumeLabel[volume_label_buffer_length];
@@ -45,12 +50,11 @@ static void dump_disk_info(drive_info_t* p) {
 }
 #endif // _DEBUG
 
-
 static const drive_info_t hobo_msc = { 1, 512, 9, 13, 0x23456789, _T("hoboNicola") };
 
 static bool is_hoboNicola_msc(drive_info_t* p) {
 	if (p && p->bytesPerSector == hobo_msc.bytesPerSector &&
-		//			p->numberOfFreeClusters == hobo_msc.numberOfFreeClusters && // free clusters‚Í•Ï‰»‚·‚éB
+		//			p->numberOfFreeClusters == hobo_msc.numberOfFreeClusters && // free clustersã¯å¤‰åŒ–ã™ã‚‹ã€‚
 		p->sectorsPerCluster == hobo_msc.sectorsPerCluster &&
 		p->totalNumberOfClusters == hobo_msc.totalNumberOfClusters &&
 		p->volumeSerial == hobo_msc.volumeSerial &&
@@ -105,8 +109,7 @@ bool ChoboMSC::find_msc_drive() {
 	return false;
 }
 
-// ƒtƒ@ƒCƒ‹‚ðŠJ‚­
-
+// ãƒ•ã‚¡ã‚¤ãƒ«ã‚’é–‹ã
 bool ChoboMSC::open() {
 	pFile = new CFile();
 	if (!pFile->Open(hoboNicola_path, CFile::modeReadWrite | CFile::typeBinary | CFile::osWriteThrough | CFile::shareDenyWrite)) {

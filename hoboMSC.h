@@ -1,3 +1,10 @@
+// observe_ime.h Copyright (c) 2018 Takeshi Higasa, okiraku-camera.tokyo
+//
+// This software is released under the MIT License.
+// http://opensource.org/licenses/mit-license.php
+//
+// The USB mass storage class (MSC) support.
+//
 #pragma once
 
 class ChoboMSC {
@@ -12,8 +19,8 @@ public:
 			delete pFile;
 	}
 
-	void close();	// ƒtƒ@ƒCƒ‹‚ğ•Â‚¶‚éB
-	bool open();// ƒtƒ@ƒCƒ‹‚ğŠJ‚­
+	void close();	// ãƒ•ã‚¡ã‚¤ãƒ«ã‚’é–‰ã˜ã‚‹ã€‚
+	bool open();// ãƒ•ã‚¡ã‚¤ãƒ«ã‚’é–‹ã
 
 	bool find_msc_drive();
 

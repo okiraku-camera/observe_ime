@@ -1,49 +1,49 @@
-observe_ime�A�v���P�[�V���� 1.1.0
+observe_imeアプリケーション 1.1.0
 Copyright (c) 2018 Takeshi Higasa.
 
-�� �T�v
-�A�N�e�B�u��Window��IME�̏�Ԃ��擾����B
+● 概要
+アクティブなWindowのIMEの状態を取得する。
 
-�^�X�N�g���C�ɃC���W�P�[�^��\�����A�C���W�P�[�^�̉E�N���b�N�Ń��j���[���J���A����̗L���^�����A�I����I���ł���B
+タスクトレイにインジケータを表示し、インジケータの右クリックでメニューを開き、動作の有効／無効、終了を選択できる。
 
-IME�̏�ԂƂ��Ĉȉ������o����B
-�@IME���L�����ǂ����B
- �u�Ђ炪�ȁv�A�u�J�^�J�i�v�A�u���Łv���ǂ����B
+IMEの状態として以下を検出する。
+　IMEが有効かどうか。
+ 「ひらがな」、「カタカナ」、「ｶﾀｶﾅ」かどうか。
 
-IME���L���ŁA�Ђ炪�� �J�^�J�i ���� �̂Ƃ��A�L�[�{�[�h��SendInput���g���Ďw��̃L�[�����b�N����B���ʂƂ���LED���_������B
-�����łȂ��Ƃ��A�����b�N����B�Ώۂ̃��b�N�L�[�́AScrLock�܂���NumLock����I���ł���B
+IMEが有効で、ひらがな カタカナ ｶﾀｶﾅ のとき、キーボードのSendInputを使って指定のキーをロックする。結果としてLEDが点灯する。
+そうでないときアンロックする。対象のロックキーは、ScrLockまたはNumLockから選択できる。
 
-ScrLock/NumLock LED�̓_��/�����́AScrLock/NumLock�L�[�̉��z�L�[�R�[�h�̏o�͂ɂ���Ď�������̂ŁA���s���̃A�v���P�[�V�����ɂ���Ă͕���p�����邩������Ȃ��B
-ScrLock�̏ꍇ�A����Excel�̑��쎞�Ȃǒ��ӂ��K�v�B
-NumLock�̏ꍇ�A�e���L�[�̂���L�[�{�[�h�ł̃e���L�[���͎��ɂ͑傫���e�����邪�A�e���L�[���X�̏ꍇ�ɂ͂قڊ֌W�Ȃ��B
+ScrLock/NumLock LEDの点灯/消灯は、ScrLock/NumLockキーの仮想キーコードの出力によって実現するので、実行中のアプリケーションによっては副作用があるかもしれない。
+ScrLockの場合、特にExcelの操作時など注意が必要。
+NumLockの場合、テンキーのあるキーボードでのテンキー入力時には大きく影響するが、テンキーレスの場合にはほぼ関係ない。
 
-vserion 1.01���
-Windows�̃X���[�v���A���ɁA�����I��ScrLock ���I�t�ɂ���B�X���[�v���A���̃T�C���C���Ńp�X���[�h���͂�NICOLA���[�h�ƂȂ��Ă��܂��Đ������p�X���[�h����͂ł��Ȃ����߁B
-IME��Ԃ̖₢���킹�́A100msec�Ԋu�ōs���悤�ɕύX�i�]����50msec�j�B
+vserion 1.01より
+Windowsのスリープ復帰時に、強制的にScrLock をオフにする。スリープ復帰時のサインインでパスワード入力がNICOLAモードとなってしまって正しいパスワードを入力できないため。
+IME状態の問い合わせは、100msec間隔で行うように変更（従来は50msec）。
 
 version 1.02 (2021/7/20)
-IME��Ԓʒm��NumLock�L�[���g����悤�ɂ����B
-IME��Ԃ̖₢���킹�́A200msec�Ԋu�ōs���悤�ɂȂ��Ă���B
+IME状態通知にNumLockキーを使えるようにした。
+IME状態の問い合わせは、200msec間隔で行うようになっている。
 
 version 1.10 (2022/4/1)
-IME��Ԓʒm��HOBONICO.BIN�t�@�C���̑���ɂ���Ď��{����@�\��ǉ��B
-HOBONICO.BIN����������@�\���ǉ��B
+IME状態通知をHOBONICO.BINファイルの操作によって実施する機能を追加。
+HOBONICO.BINを検索する機能も追加。
 
 -------------
 
-�� ����
-��\���̃E�B���h�E��1���B
+● 実装
+非表示のウィンドウを1つもつ。
 
-�A�N�e�B�u�ȃE�B���h�E�̃f�t�H���gIME�E�B���h�E�ɑ΂���WM_IME_CONTROL��SendMessage()���ď�Ԃ�₢���킹��B
-�₢���킹�͎w��̎��ԊԊu�ōs���B1.0.2�łł�200msec�Ɉ�x�B
-�₢���킹�^�C�~���O��WM_TIMER�ɂ���ē���B
+アクティブなウィンドウのデフォルトIMEウィンドウに対してWM_IME_CONTROLをSendMessage()して状態を問い合わせる。
+問い合わせは指定の時間間隔で行う。1.0.2版では200msecに一度。
+問い合わせタイミングはWM_TIMERによって得る。
 
-�A�N�e�B�u��GUI�X���b�h���ω��������Ƃ����o�ł���΁A���_��WM_TIMER�����炷���Ƃ��ł��邪�A�ǂ����̂��m��Ȃ��B
+アクティブなGUIスレッドが変化したことを検出できれば、ムダなWM_TIMERを減らすことができるが、どうやるのか知らない。
 
-�L�[�������ꂽ�ӂ������Ƃ��́Akeybd_event() �ł͂Ȃ��ASendInput()�Ƃ���API���g���B
+キーが押されたふりをするときは、keybd_event() ではなく、SendInput()というAPIを使う。
 
-�X���[�v�ɓ���Ƃ��AScrLock/Numlock����������B�������Ȃ��ƕ��A����ScrLock/NumLock���I���̂܂܂ɂȂ�T�C���C����񂪐��������͂ł��Ȃ����Ƃ�����B
-WM_POWERBROADCAST���b�Z�[�W���󂯂��Ƃ��AwParam��PBT_APMSUSPEND��PBT_APMRESUMEAUTOMATIC�̂Ƃ��AScrLock/NumLOck���I�t�ɂ���B�T�X�y���h���͌��ʂ��Ȃ����A���W���[�����ɂ͌��ʂ��������B�f�X�N�g�b�v�񕜌�t�H�[�J�X�E�B���h�E�����{����͏�ԂȂ�΁AIME�Ď��@�\�ɂ���Ă��̎��_��ScrLock�̓I���ɂȂ�B2018/12/08
+スリープに入るとき、ScrLock/Numlockを解除する。そうしないと復帰時にScrLock/NumLockがオンのままになりサインイン情報が正しく入力できないことがある。
+WM_POWERBROADCASTメッセージを受けたとき、wParamがPBT_APMSUSPENDかPBT_APMRESUMEAUTOMATICのとき、ScrLock/NumLOckをオフにする。サスペンド時は効果がないが、リジューム時には効果があった。デスクトップ回復後フォーカスウィンドウが日本語入力状態ならば、IME監視機能によってその時点でScrLockはオンになる。2018/12/08
 
 
 *** LICENSE

@@ -1,4 +1,4 @@
-// observe_ime_wnd.h Copyright (c) 2018 okiraku-camera.tokyo
+// observe_ime_wnd.h Copyright (c) 2018 Takeshi Higasa, okiraku-camera.tokyo
 //
 // This software is released under the MIT License.
 // http://opensource.org/licenses/mit-license.php
@@ -49,7 +49,7 @@ protected:
 	void send_keycode(WORD vkey, key_action_t action);
 	void SetMenuChecked();
 
-	void notify_keyboard(bool kana);	// NICOLAƒ‚[ƒh‚ÌƒIƒ“EƒIƒt’Ê’m
+	void notify_keyboard(bool kana);	// NICOLAï¿½ï¿½ï¿½[ï¿½hï¿½ÌƒIï¿½ï¿½ï¿½Eï¿½Iï¿½tï¿½Ê’m
 
 
 public:
