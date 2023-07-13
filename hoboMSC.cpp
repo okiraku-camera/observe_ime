@@ -14,7 +14,7 @@ static const int volume_label_buffer_length = 12;
 typedef struct {
 	DWORD sectorsPerCluster;
 	DWORD bytesPerSector;
-	DWORD numberOfFreeClusters; // この項目を評価するのはやめる。
+	DWORD numberOfFreeClusters; 
 	DWORD totalNumberOfClusters;
 	DWORD volumeSerial;
 	TCHAR volumeLabel[volume_label_buffer_length];
@@ -54,7 +54,7 @@ static const drive_info_t hobo_msc = { 1, 512, 9, 13, 0x23456789, _T("hoboNicola
 
 static bool is_hoboNicola_msc(drive_info_t* p) {
 	if (p && p->bytesPerSector == hobo_msc.bytesPerSector &&
-		//			p->numberOfFreeClusters == hobo_msc.numberOfFreeClusters && // free clustersは変化する。
+		//			p->numberOfFreeClusters == hobo_msc.numberOfFreeClusters && // free clusters
 		p->sectorsPerCluster == hobo_msc.sectorsPerCluster &&
 		p->totalNumberOfClusters == hobo_msc.totalNumberOfClusters &&
 		p->volumeSerial == hobo_msc.volumeSerial &&
@@ -109,7 +109,7 @@ bool ChoboMSC::find_msc_drive() {
 	return false;
 }
 
-// ファイルを開く
+// open a file.
 bool ChoboMSC::open() {
 	pFile = new CFile();
 	if (!pFile->Open(hoboNicola_path, CFile::modeReadWrite | CFile::typeBinary | CFile::osWriteThrough | CFile::shareDenyWrite)) {

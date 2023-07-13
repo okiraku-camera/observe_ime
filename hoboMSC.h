@@ -19,8 +19,8 @@ public:
 			delete pFile;
 	}
 
-	void close();	// ファイルを閉じる。
-	bool open();// ファイルを開く
+	void close();
+	bool open(); 
 
 	bool find_msc_drive();
 

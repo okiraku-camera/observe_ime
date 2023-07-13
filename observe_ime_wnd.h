@@ -49,7 +49,7 @@ protected:
 	void send_keycode(WORD vkey, key_action_t action);
 	void SetMenuChecked();
 
-	void notify_keyboard(bool kana);	// NICOLA���[�h�̃I���E�I�t�ʒm
+	void notify_keyboard(bool kana);
 
 
 public:
