@@ -1,7 +1,7 @@
 # observe_ime , The companion application of hoboNicola adapters and keyboards for Windows environments.
  observe_ime Copyright 2018-2023 Takeshi Higasa, okiraku-camera.tokyo.
 
- releaseビルドしたバイナリ(observe_ime.exe)は、[ブログのダウンロードページ](https://okiraku-camera.tokyo/blog/?page_id=12997)から、あるいは、~~[こちら](./release) から~~ダウンロードできます。
+ releaseビルドしたバイナリ(observe_ime.exe)は、[ブログのダウンロードページ](https://okiraku-camera.tokyo/blog/?page_id=12997)から、あるいは、[こちら](https://github.com/okiraku-camera/observe_ime/releases) からダウンロードできます。
 
 ## observe_imeについて
 observe_imeは、WindowsのIME状態の入力文字種を検出し、おもに仮想キーコードを使ったキーストロークによりhoboNicolaに通知するためのWIN32アプリケーションです。
