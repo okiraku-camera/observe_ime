@@ -1,4 +1,4 @@
-// observe_ime.h Copyright (c) 2018 Takeshi Higasa, okiraku-camera.tokyo
+// hoboMSC.cpp Copyright (c) 2022 Takeshi Higasa, okiraku-camera.tokyo
 //
 // This software is released under the MIT License.
 // http://opensource.org/licenses/mit-license.php
@@ -54,7 +54,7 @@ static const drive_info_t hobo_msc = { 1, 512, 9, 13, 0x23456789, _T("hoboNicola
 
 static bool is_hoboNicola_msc(drive_info_t* p) {
 	if (p && p->bytesPerSector == hobo_msc.bytesPerSector &&
-		//			p->numberOfFreeClusters == hobo_msc.numberOfFreeClusters && // free clusters
+		//	p->numberOfFreeClusters == hobo_msc.numberOfFreeClusters && // free clusters
 		p->sectorsPerCluster == hobo_msc.sectorsPerCluster &&
 		p->totalNumberOfClusters == hobo_msc.totalNumberOfClusters &&
 		p->volumeSerial == hobo_msc.volumeSerial &&
@@ -113,7 +113,7 @@ bool ChoboMSC::find_msc_drive() {
 bool ChoboMSC::open() {
 	pFile = new CFile();
 	if (!pFile->Open(hoboNicola_path, CFile::modeReadWrite | CFile::typeBinary | CFile::osWriteThrough | CFile::shareDenyWrite)) {
-	delete pFile;
+		delete pFile;
 		pFile = 0;
 		return false;
 	}
@@ -147,5 +147,4 @@ bool ChoboMSC::msc_notify(bool kana) {
 		pFile = 0;
 	}
 	return false;
-
 }
