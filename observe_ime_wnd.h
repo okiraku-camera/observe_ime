@@ -1,4 +1,4 @@
-// observe_ime_wnd.h Copyright (c) 2018 Takeshi Higasa, okiraku-camera.tokyo
+// observe_ime_wnd.h Copyright (c) 2018 okiraku-camera.tokyo
 //
 // This software is released under the MIT License.
 // http://opensource.org/licenses/mit-license.php
@@ -23,6 +23,9 @@ class Cobserve_ime_wnd : public CWnd
 	HMENU m_trayMenu;
 
 	bool m_useMSC;
+	static UINT m_uTaskbarRestart;
+	bool m_fTrayIcon;
+	bool m_fErrorNotify;
 
 public:
 	Cobserve_ime_wnd();
@@ -31,7 +34,7 @@ public:
 
 	int m_keycode;
 
-	void SetNotifyIcon();
+	void SetNotifyIcon(bool error = false);
 	void DeleteNotifyIcon();
 	void ChangeNotifyIcon(bool error);
 
@@ -40,16 +43,18 @@ public:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnDestroy();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
+
 protected:
 	virtual void PostNcDestroy();
 	afx_msg LRESULT OnPmShellnotify(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnIdmExitApp(WPARAM wParam, LPARAM lParam);
 	virtual BOOL OnCommand(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT  OnTaskbarRestart(WPARAM w, LPARAM l);
 
 	void send_keycode(WORD vkey, key_action_t action);
 	void SetMenuChecked();
 
-	void notify_keyboard(bool kana);
+	void notify_keyboard(bool kana);	// NICOLAモードのオン・オフ通知
 
 
 public:

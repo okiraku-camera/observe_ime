@@ -15,11 +15,16 @@ static const int observe_interval = 200;
 static const int msc_search_interval = 500;
 ChoboMSC hoboMSC;
 
+UINT Cobserve_ime_wnd::m_uTaskbarRestart = 0;
+
 Cobserve_ime_wnd::Cobserve_ime_wnd() {
 	m_timer_id = m_msc_timer = 0;
 	m_trayMenu = 0;
 	m_trayIcon = 0;
 	m_trayIcon2 = 0;
+	m_fTrayIcon = false;
+	m_fErrorNotify = false;
+
 	m_enabled = false;
 	m_useMSC = false;
 	m_keycode = VK_SCROLL;
@@ -32,6 +37,7 @@ BEGIN_MESSAGE_MAP(Cobserve_ime_wnd, CWnd)
 	ON_MESSAGE(PM_SHELLNOTIFY, &Cobserve_ime_wnd::OnPmShellnotify)
 	ON_MESSAGE(IDM_EXIT_APP, &Cobserve_ime_wnd::OnIdmExitApp)
 	ON_WM_POWERBROADCAST()
+	ON_REGISTERED_MESSAGE(m_uTaskbarRestart, &OnTaskbarRestart)
 END_MESSAGE_MAP()
 
 void Cobserve_ime_wnd::PostNcDestroy() {
@@ -44,6 +50,7 @@ bool Cobserve_ime_wnd::Create() {
 	HWND hwnd = ::FindWindow(lpcClass, AfxGetAppName());
 	if (hwnd != 0)
 		return false;
+	m_uTaskbarRestart = RegisterWindowMessage(TEXT("TaskbarCreated"));
 	return CreateEx(0, lpcClass, AfxGetAppName(), WS_POPUP, CRect(0, 0, 0, 0), NULL , NULL);
 }
 
@@ -237,8 +244,8 @@ void Cobserve_ime_wnd::OnTimer(UINT_PTR id) {
 }
 
 
-void Cobserve_ime_wnd::SetNotifyIcon() {
-
+void Cobserve_ime_wnd::SetNotifyIcon(bool error) {
+	m_fErrorNotify = error;
 	NOTIFYICONDATA	nic;
 	memset(&nic, 0, sizeof(NOTIFYICONDATA));
 	nic.cbSize = sizeof(NOTIFYICONDATA);
@@ -247,9 +254,9 @@ void Cobserve_ime_wnd::SetNotifyIcon() {
 
 	nic.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
 	nic.uCallbackMessage = PM_SHELLNOTIFY;
-	nic.hIcon = m_trayIcon;
-	lstrcpy(nic.szTip, tip_working);
-	Shell_NotifyIcon(NIM_ADD, &nic);
+	nic.hIcon = error ? m_trayIcon2 : m_trayIcon;
+	_tcsncpy_s(nic.szTip, error ? tip_error : tip_working, sizeof(nic.szTip) / sizeof(TCHAR));
+	m_fTrayIcon = Shell_NotifyIcon(NIM_ADD, &nic);
 }
 
 void Cobserve_ime_wnd::DeleteNotifyIcon() {
@@ -259,9 +266,11 @@ void Cobserve_ime_wnd::DeleteNotifyIcon() {
 	nic.hWnd = m_hWnd;
 	nic.uID = IDI_ICON2;
 	Shell_NotifyIcon(NIM_DELETE, &nic);
+	m_fTrayIcon = false;
 }
 
 void Cobserve_ime_wnd::ChangeNotifyIcon(bool error) {
+	m_fErrorNotify = error;
 	NOTIFYICONDATA	nic;
 	memset(&nic, 0, sizeof(NOTIFYICONDATA));
 	nic.cbSize = sizeof(NOTIFYICONDATA);
@@ -270,8 +279,16 @@ void Cobserve_ime_wnd::ChangeNotifyIcon(bool error) {
 	nic.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
 	nic.uCallbackMessage = PM_SHELLNOTIFY;
 	nic.hIcon = error ? m_trayIcon2 : m_trayIcon;
-	lstrcpy(nic.szTip, error ? tip_error : tip_working);
-	Shell_NotifyIcon(NIM_MODIFY, &nic);
+	_tcsncpy_s(nic.szTip, error ? tip_error : tip_working, sizeof(nic.szTip) / sizeof(TCHAR));
+	m_fTrayIcon = Shell_NotifyIcon(NIM_MODIFY, &nic);
+}
+
+
+afx_msg LRESULT Cobserve_ime_wnd::OnTaskbarRestart(WPARAM wp, LPARAM lp) {
+	if (m_fTrayIcon)
+		DeleteNotifyIcon();
+	SetNotifyIcon(m_fErrorNotify);
+	return 1;
 }
 
 

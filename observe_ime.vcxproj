@@ -20,7 +20,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{CD60C934-CB0F-4577-8C0D-49D8E2957B9E}</ProjectGuid>
+    <ProjectGuid>{DE76345C-4CE8-4E4A-93BD-E5503CB16507}</ProjectGuid>
     <Keyword>MFCProj</Keyword>
     <RootNamespace>observeime</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
