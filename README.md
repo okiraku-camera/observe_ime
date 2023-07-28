@@ -35,3 +35,6 @@ observe_imeは、WindowsのIME状態の入力文字種を検出し、おもに�
   * \HKEY_CURRENT_USER\SOFTWARE\okiraku-camera\observe_ime\settings 内に、DWORD値 observe_interval を追加し値を設定する。値は、十進数の100を指定すれば100msecとなる。レジストリ設定がない場合は200msec。
   * レジストリ値の読み取りはプログラム開始時にのみ行うので、変更したときはobserve_ime.exeを再起動すること。
   * タスクトレイのインジケーターアイコンの上にマウスカーソルを置いたとき、ツールチップの一部としてリソース内のファイルバージョンを表示するようにした。
+* version 1.2.1 (2023/7/28)
+  * Windows Explorer が再起動したとき、トレイアイコンを再表示するようにした。
+	* RegisterWindowMessage(TEXT("TaskbarCreated")); で得られた値が来たら再表示する。
