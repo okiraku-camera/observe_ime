@@ -217,6 +217,8 @@
     <ResourceCompile Include="observeime.rc" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="LICENSE" />
+    <None Include="README.md" />
     <None Include="res\observeime.rc2" />
   </ItemGroup>
   <ItemGroup>

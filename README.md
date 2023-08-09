@@ -37,4 +37,4 @@ observe_imeは、WindowsのIME状態の入力文字種を検出し、おもに�
   * タスクトレイのインジケーターアイコンの上にマウスカーソルを置いたとき、ツールチップの一部としてリソース内のファイルバージョンを表示するようにした。
 * version 1.2.1 (2023/7/28)
   * Windows Explorer が再起動したとき、トレイアイコンを再表示するようにした。
-	* RegisterWindowMessage(TEXT("TaskbarCreated")); で得られた値が来たら再表示する。
+  * RegisterWindowMessage(TEXT("TaskbarCreated")); で得られた値が来たらトレイアイコンを再表示する。
