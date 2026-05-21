@@ -195,6 +195,9 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="DeviceHistory.h" />
+    <ClInclude Include="HIDSettingsDlg.h" />
+    <ClInclude Include="hoboHID.h" />
     <ClInclude Include="hoboMSC.h" />
     <ClInclude Include="observe_ime.h" />
     <ClInclude Include="observe_ime_wnd.h" />
@@ -203,6 +206,9 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DeviceHistory.cpp" />
+    <ClCompile Include="HIDSettingsDlg.cpp" />
+    <ClCompile Include="hoboHID.cpp" />
     <ClCompile Include="hoboMSC.cpp" />
     <ClCompile Include="observe_ime.cpp" />
     <ClCompile Include="observe_ime_wnd.cpp" />
@@ -224,6 +230,10 @@
   <ItemGroup>
     <Image Include="res\icon2.ico" />
     <Image Include="res\icon_red.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="20260515.log" />
+    <Text Include="2026_0518.log" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
