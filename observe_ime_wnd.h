@@ -5,24 +5,33 @@
 
 #pragma once
 #include <afxwin.h>
+#include "DeviceHistory.h"
+
 #define TRAY_NOTIFY_ID		WM_USER + 2001
 #define PM_SHELLNOTIFY		WM_USER + 2002		// Shell notification 
 
 typedef enum { toggle = 1, on = 2, off = 3 } key_action_t;
 
+// 通知方式
+typedef enum {
+	METHOD_LOCKKEY = 0,  // ScrollLock/NumLock
+	METHOD_MSC = 1,      // Mass Storage Class
+	METHOD_HID = 2       // USB HID
+} notify_method_t;
 
 class Cobserve_ime_wnd : public CWnd
 {
 	UINT_PTR m_timer_id;
 	UINT_PTR m_msc_timer;
 	int m_interval;
+	DWORD m_lastThreadId;
 
 	bool m_enabled;
 	HICON m_trayIcon;
 	HICON m_trayIcon2;
 	HMENU m_trayMenu;
 
-	bool m_useMSC;
+	notify_method_t m_notifyMethod;
 	static UINT m_uTaskbarRestart;
 	bool m_fTrayIcon;
 	bool m_fErrorNotify;
@@ -34,30 +43,25 @@ public:
 
 	int m_keycode;
 
-	void SetNotifyIcon(bool error = false);
-	void DeleteNotifyIcon();
-	void ChangeNotifyIcon(bool error);
-
-
-	DECLARE_MESSAGE_MAP()
+protected:
+	virtual void PostNcDestroy();
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnDestroy();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
-
-protected:
-	virtual void PostNcDestroy();
 	afx_msg LRESULT OnPmShellnotify(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnIdmExitApp(WPARAM wParam, LPARAM lParam);
-	virtual BOOL OnCommand(WPARAM wParam, LPARAM lParam);
-	afx_msg LRESULT  OnTaskbarRestart(WPARAM w, LPARAM l);
-
-	void send_keycode(WORD vkey, key_action_t action);
-	void SetMenuChecked();
-
-	void notify_keyboard(bool kana);	// NICOLAモードのオン・オフ通知
-
-
-public:
 	afx_msg UINT OnPowerBroadcast(UINT nPowerEvent, LPARAM nEventData);
-};
+	afx_msg LRESULT OnTaskbarRestart(WPARAM wp, LPARAM lp);
+	virtual BOOL OnCommand(WPARAM wParam, LPARAM lParam);
+	DECLARE_MESSAGE_MAP()
 
+private:
+	void send_keycode(WORD vkey, key_action_t action = toggle);
+	void notify_keyboard(bool kana);
+	void SetNotifyIcon(bool error = false);
+	void ChangeNotifyIcon(bool error);
+	void DeleteNotifyIcon();
+	void SetMenuChecked();
+	void InitNotifyIconData(NOTIFYICONDATA& nic, bool error);
+	void CloseCurrentNotifyDevice();
+};

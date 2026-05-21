@@ -8,12 +8,15 @@
 #include "observe_ime.h"
 #include "observe_ime_wnd.h"
 #include "hoboMSC.h"
+#include "hoboHID.h"
+#include "HIDSettingsDlg.h"
+#include "DeviceHistory.h"
 #include <imm.h>
-
 
 static const int observe_interval = 200;
 static const int msc_search_interval = 500;
 ChoboMSC hoboMSC;
+ChoboHID hoboHID;
 
 UINT Cobserve_ime_wnd::m_uTaskbarRestart = 0;
 
@@ -26,9 +29,10 @@ Cobserve_ime_wnd::Cobserve_ime_wnd() {
 	m_fErrorNotify = false;
 
 	m_enabled = false;
-	m_useMSC = false;
+	m_notifyMethod = METHOD_LOCKKEY;
 	m_keycode = VK_SCROLL;
 	m_interval = observe_interval;
+	m_lastThreadId = 0;
 }
 
 BEGIN_MESSAGE_MAP(Cobserve_ime_wnd, CWnd)
@@ -51,12 +55,11 @@ bool Cobserve_ime_wnd::Create() {
 	if (hwnd != 0)
 		return false;
 	m_uTaskbarRestart = RegisterWindowMessage(TEXT("TaskbarCreated"));
-	return CreateEx(0, lpcClass, AfxGetAppName(), WS_POPUP, CRect(0, 0, 0, 0), NULL , NULL);
+	return CreateEx(0, lpcClass, AfxGetAppName(), WS_POPUP, CRect(0, 0, 0, 0), NULL, NULL);
 }
 
 static CString tip_working = _T("observe_ime working.");
 static CString tip_error = _T("observe_ime NO hoboNicola.");
-
 
 int Cobserve_ime_wnd::OnCreate(LPCREATESTRUCT lpCreateStruct) {
 	if (CWnd::OnCreate(lpCreateStruct) == -1)
@@ -70,17 +73,38 @@ int Cobserve_ime_wnd::OnCreate(LPCREATESTRUCT lpCreateStruct) {
 	else if (m_interval > 1000)
 		m_interval = 1000;
 
-	tip_working.Format(_T("observe_ime %s working."), theApp.version);
-	tip_error.Format(_T("observe_ime %s NO hoboNicola."), theApp.version);
-
+	tip_working = _T("observe_ime ") + theApp.version + _T(" working.");
+	tip_error = _T("observe_ime ") + theApp.version + _T(" NO hoboNicola.");
 	m_enabled = true;
-	if (theApp.GetProfileInt(_T("settings"), _T("useMSC"), 0)) {
-		m_useMSC = true;
-		if (!hoboMSC.find_msc_drive() || !hoboMSC.open()) { // hoboNicolaドライブが見つからない。
+
+	// 通知方式の読み込み
+	int method = theApp.GetProfileInt(_T("settings"), _T("notifyMethod"), METHOD_LOCKKEY);
+	m_notifyMethod = (notify_method_t)method;
+
+	if (m_notifyMethod == METHOD_MSC) {
+		if (!hoboMSC.find_msc_drive() || !hoboMSC.open()) {
+			m_enabled = false;
+			m_msc_timer = SetTimer(2, msc_search_interval, NULL);
+		}
+	} else if (m_notifyMethod == METHOD_HID) {
+		// DeviceHistoryから設定を読み込む
+		CDeviceHistory deviceHistory;
+		deviceHistory.LoadFromRegistry();
+		const DeviceInfo& lastDevice = deviceHistory.GetLastUsed();
+
+		if (lastDevice.IsValid()) {
+			hoboHID.setDeviceAttributes(lastDevice.vid, lastDevice.pid,
+				deviceHistory.GetUsagePage(), deviceHistory.GetUsage());
+			if (!hoboHID.find_hid_device() || !hoboHID.open()) {
+				m_enabled = false;
+				m_msc_timer = SetTimer(2, msc_search_interval, NULL);
+			}
+		} else {
 			m_enabled = false;
 			m_msc_timer = SetTimer(2, msc_search_interval, NULL);
 		}
 	}
+
 	if (m_enabled)
 		m_timer_id = SetTimer(1, m_interval, NULL);
 	SetNotifyIcon();
@@ -109,16 +133,22 @@ afx_msg LRESULT Cobserve_ime_wnd::OnIdmExitApp(WPARAM wParam, LPARAM lParam) {
 void Cobserve_ime_wnd::SetMenuChecked() {
 	if (!m_trayMenu)
 		return;
-	CheckMenuItem(m_trayMenu, IDM_OBSERVING, MF_BYCOMMAND | m_enabled ? MF_CHECKED : MF_UNCHECKED);
-	CheckMenuItem(m_trayMenu, IDM_MSC_NOTIFY, MF_BYCOMMAND | m_useMSC ? MF_CHECKED : MF_UNCHECKED);
 
-	CheckMenuItem(m_trayMenu, IDM_VKSCROLL, MF_BYCOMMAND | (m_keycode == VK_SCROLL) ? MF_CHECKED : MF_UNCHECKED);
-	CheckMenuItem(m_trayMenu, IDM_VKNUMLOCK, MF_BYCOMMAND | (m_keycode == VK_NUMLOCK) ? MF_CHECKED : MF_UNCHECKED);
+	CheckMenuItem(m_trayMenu, IDM_OBSERVING, MF_BYCOMMAND | (m_enabled ? MF_CHECKED : MF_UNCHECKED));
 
-	//EnableMenuItem(m_trayMenu, IDM_VKSCROLL, MF_BYCOMMAND | m_useMSC ? MF_GRAYED : MF_ENABLED);
-	//EnableMenuItem(m_trayMenu, IDM_VKNUMLOCK, MF_BYCOMMAND | m_useMSC ? MF_GRAYED : MF_ENABLED);
+	// 通知方式のチェック
+	CheckMenuItem(m_trayMenu, IDM_LOCKKEY_NOTIFY, MF_BYCOMMAND | ((m_notifyMethod == METHOD_LOCKKEY) ? MF_CHECKED : MF_UNCHECKED));
+	CheckMenuItem(m_trayMenu, IDM_MSC_NOTIFY, MF_BYCOMMAND | ((m_notifyMethod == METHOD_MSC) ? MF_CHECKED : MF_UNCHECKED));
+	CheckMenuItem(m_trayMenu, IDM_HID_NOTIFY, MF_BYCOMMAND | ((m_notifyMethod == METHOD_HID) ? MF_CHECKED : MF_UNCHECKED));
+
+	// ScrLock/NumLock の有効/無効とチェック
+	UINT enableFlag = (m_notifyMethod == METHOD_LOCKKEY) ? MF_ENABLED : MF_GRAYED;
+	EnableMenuItem(m_trayMenu, IDM_VKSCROLL, MF_BYCOMMAND | enableFlag);
+	EnableMenuItem(m_trayMenu, IDM_VKNUMLOCK, MF_BYCOMMAND | enableFlag);
+
+	CheckMenuItem(m_trayMenu, IDM_VKSCROLL, MF_BYCOMMAND | ((m_keycode == VK_SCROLL) ? MF_CHECKED : MF_UNCHECKED));
+	CheckMenuItem(m_trayMenu, IDM_VKNUMLOCK, MF_BYCOMMAND | ((m_keycode == VK_NUMLOCK) ? MF_CHECKED : MF_UNCHECKED));
 }
-
 
 BOOL Cobserve_ime_wnd::OnCommand(WPARAM wParam, LPARAM lParam) {
 	int key = m_keycode;
@@ -130,30 +160,101 @@ BOOL Cobserve_ime_wnd::OnCommand(WPARAM wParam, LPARAM lParam) {
 			KillTimer(m_timer_id);
 			m_timer_id = 0;
 			m_enabled = false;
-		}
-		else {
+		} else {
 			m_timer_id = SetTimer(1, m_interval, NULL);
 			m_enabled = true;
 			ChangeNotifyIcon(false);
-
+		}
+	} else if (wParam == IDM_LOCKKEY_NOTIFY) {
+		if (m_notifyMethod != METHOD_LOCKKEY) {
+			CloseCurrentNotifyDevice();
+			m_notifyMethod = METHOD_LOCKKEY;
+			theApp.WriteProfileInt(_T("settings"), _T("notifyMethod"), METHOD_LOCKKEY);
 		}
 	} else if (wParam == IDM_MSC_NOTIFY) {
-		if (m_useMSC) {
-			hoboMSC.close();
-			m_useMSC = false;
-			theApp.WriteProfileInt(_T("settings"), _T("useMSC"), 0);
-		} else {
+		if (m_notifyMethod != METHOD_MSC) {
+			CloseCurrentNotifyDevice();
 			if (hoboMSC.find_msc_drive() && hoboMSC.open()) {
-				m_useMSC = true;
-				theApp.WriteProfileInt(_T("settings"), _T("useMSC"), 1);
-			} else
+				m_notifyMethod = METHOD_MSC;
+				theApp.WriteProfileInt(_T("settings"), _T("notifyMethod"), METHOD_MSC);
+			} else {
 				AfxMessageBox(_T("hoboNicola not found."));
+			}
 		}
-	}
-	else if (wParam == IDM_VKNUMLOCK)
+	} else if (wParam == IDM_HID_NOTIFY) {
+		if (m_notifyMethod != METHOD_HID) {
+			CloseCurrentNotifyDevice();
+
+			// DeviceHistoryから設定を読み込む
+			CDeviceHistory deviceHistory;
+			deviceHistory.LoadFromRegistry();
+			const DeviceInfo& lastDevice = deviceHistory.GetLastUsed();
+
+			if (!lastDevice.IsValid()) {
+				AfxMessageBox(_T("HID device settings not configured.\nPlease configure VID/PID first."));
+			} else {
+				hoboHID.setDeviceAttributes(lastDevice.vid, lastDevice.pid,
+					deviceHistory.GetUsagePage(), deviceHistory.GetUsage());
+				if (hoboHID.find_hid_device() && hoboHID.open()) {
+					m_notifyMethod = METHOD_HID;
+					theApp.WriteProfileInt(_T("settings"), _T("notifyMethod"), METHOD_HID);
+				} else {
+					AfxMessageBox(_T("hoboNicola HID device not found."));
+				}
+			}
+		}
+	} else if (wParam == IDM_HID_SETTINGS) {
+		CHIDSettingsDlg dlg;
+
+		// DeviceHistoryから最後の設定を読み込む
+		CDeviceHistory deviceHistory;
+		deviceHistory.LoadFromRegistry();
+		const DeviceInfo& lastDevice = deviceHistory.GetLastUsed();
+
+		if (lastDevice.IsValid()) {
+			dlg.m_vid = lastDevice.vid;
+			dlg.m_pid = lastDevice.pid;
+			dlg.m_usagePage = deviceHistory.GetUsagePage();
+			dlg.m_usage = deviceHistory.GetUsage();
+		} else {
+			// 履歴がない場合はデフォルト値
+			dlg.m_vid = 0;
+			dlg.m_pid = 0;
+			dlg.m_usagePage = 0xFF00;
+			dlg.m_usage = 0x0001;
+		}
+
+		if (dlg.DoModal() == IDOK) {
+			// ダイアログ内でDeviceHistoryに保存済み
+
+			// HID通知モードの場合は再接続
+			if (m_notifyMethod == METHOD_HID) {
+				hoboHID.resetDevice();
+				hoboHID.setDeviceAttributes(dlg.m_vid, dlg.m_pid, dlg.m_usagePage, dlg.m_usage);
+				// デバイス情報をトレース出力
+				TRACE(_T("HID Reconnection attempt - VID: 0x%04X, PID: 0x%04X, UsagePage: 0x%04X, Usage: 0x%04X\n"),
+					dlg.m_vid, dlg.m_pid, dlg.m_usagePage, dlg.m_usage);
+
+				if (hoboHID.find_hid_device() && hoboHID.open()) {
+					AfxMessageBox(_T("HID device reconnected successfully."));
+				} else {
+					AfxMessageBox(_T("HID device not found with new settings.\nNotification disabled."));
+					m_enabled = false;
+					if (m_timer_id) {
+						KillTimer(m_timer_id);
+						m_timer_id = 0;
+					}
+					m_msc_timer = SetTimer(2, msc_search_interval, NULL);
+					ChangeNotifyIcon(true);
+				}
+			}
+		}
+	} else if (wParam == IDM_VKNUMLOCK) {
 		m_keycode = VK_NUMLOCK;
-	else if (wParam == IDM_VKSCROLL)
+	} else if (wParam == IDM_VKSCROLL) {
 		m_keycode = VK_SCROLL;
+	}
+
 	if (key != m_keycode)
 		theApp.WriteProfileInt(_T("settings"), _T("key"), m_keycode);
 
@@ -181,16 +282,17 @@ void Cobserve_ime_wnd::send_keycode(WORD vkey, key_action_t action) {
 	SendInput(1, &input, sizeof(INPUT));
 }
 
-// NICOLAモードのオン・オフ通知
-// MSCを使うときはScrLockやNumLockを送信しない。
-void  Cobserve_ime_wnd::notify_keyboard(bool kana) {
+void Cobserve_ime_wnd::notify_keyboard(bool kana) {
 	if (!m_enabled)
 		return;
-	if (!m_useMSC)
+
+	switch (m_notifyMethod) {
+	case METHOD_LOCKKEY:
 		send_keycode(m_keycode, kana ? on : off);
-	else {
+		break;
+
+	case METHOD_MSC:
 		if (!hoboMSC.msc_notify(kana)) {
-//			m_useMSC = false;
 			m_enabled = false;
 			KillTimer(m_timer_id);
 			m_timer_id = 0;
@@ -199,6 +301,19 @@ void  Cobserve_ime_wnd::notify_keyboard(bool kana) {
 			ChangeNotifyIcon(true);
 			m_msc_timer = SetTimer(2, msc_search_interval, NULL);
 		}
+		break;
+
+	case METHOD_HID:
+		if (!hoboHID.hid_notify(kana)) {
+			m_enabled = false;
+			KillTimer(m_timer_id);
+			m_timer_id = 0;
+			MessageBeep(MB_ICONHAND);
+			TRACE(_T("notify_keyboard(hid) failed.\n"));
+			ChangeNotifyIcon(true);
+			m_msc_timer = SetTimer(2, msc_search_interval, NULL);
+		}
+		break;
 	}
 }
 
@@ -208,30 +323,85 @@ void  Cobserve_ime_wnd::notify_keyboard(bool kana) {
 #ifndef IMC_GETOPENSTATUS 
 #define IMC_GETOPENSTATUS 5
 #endif
+#ifndef IME_CMODE_NATIVE
+#define IME_CMODE_NATIVE    0x0001
+#endif
+#ifndef IME_CMODE_KATAKANA
+#define IME_CMODE_KATAKANA  0x0002
+#endif
 
 void Cobserve_ime_wnd::OnTimer(UINT_PTR id) {
 	CWnd::OnTimer(id);
 	if (id == m_timer_id) {
 		bool status = false;
 		static bool last_status = false;
+
+		HWND hwndTarget = NULL;
+		DWORD currentThreadId = 0;
+
 		GUITHREADINFO gti = { 0 };
 		gti.cbSize = sizeof(GUITHREADINFO);
-		GetGUIThreadInfo(NULL, &gti);
-		if (IsWindow(gti.hwndFocus)) {
-			HWND hwndime = ImmGetDefaultIMEWnd(gti.hwndFocus);
+
+		if (GetGUIThreadInfo(NULL, &gti) && IsWindow(gti.hwndFocus)) {
+			hwndTarget = gti.hwndFocus;
+			currentThreadId = GetWindowThreadProcessId(hwndTarget, NULL);
+		} else {
+			hwndTarget = ::GetForegroundWindow();
+			if (IsWindow(hwndTarget)) {
+				currentThreadId = GetWindowThreadProcessId(hwndTarget, NULL);
+			}
+		}
+
+		if (!IsWindow(hwndTarget)) {
+			status = false;
+			TRACE(_T("No valid hwndTarget, set status to false\n"));
+		} else {
+			if (m_lastThreadId != 0 && m_lastThreadId != currentThreadId) {
+				TRACE(_T("Thread changed: %08x -> %08x\n"), m_lastThreadId, currentThreadId);
+			}
+
+			HWND hwndime = ImmGetDefaultIMEWnd(hwndTarget);
 			if (!IsWindow(hwndime)) {
 				TRACE(_T("ImmGetDefaultIMEWnd() failed\n"));
-				return;
+				status = false;
+			} else {
+				if (::SendMessage(hwndime, WM_IME_CONTROL, IMC_GETOPENSTATUS, 0) == 1)
+					status = (::SendMessage(hwndime, WM_IME_CONTROL, IMC_GETCONVERSIONMODE, 0) & 1) != 0;
+				else
+					status = false;
 			}
-			if (::SendMessage(hwndime, WM_IME_CONTROL, IMC_GETOPENSTATUS, 0) == 1)
-				status = (::SendMessage(hwndime, WM_IME_CONTROL, IMC_GETCONVERSIONMODE, 0) & 1) != 0;
+
+			m_lastThreadId = currentThreadId;
 		}
+
 		if (status != last_status) {
 			last_status = status;
 			notify_keyboard(status);
 		}
 	} else if (id == m_msc_timer) {
-		if (hoboMSC.find_msc_drive() && hoboMSC.open()) {
+		bool reconnected = false;
+
+		switch (m_notifyMethod) {
+		case METHOD_MSC:
+			reconnected = hoboMSC.find_msc_drive() && hoboMSC.open();
+			break;
+		case METHOD_HID:
+			// 最新の設定で再接続を試みる
+		{
+			CDeviceHistory deviceHistory;
+			deviceHistory.LoadFromRegistry();
+			const DeviceInfo& lastDevice = deviceHistory.GetLastUsed();
+
+			if (lastDevice.IsValid()) {
+				hoboHID.setDeviceAttributes(lastDevice.vid, lastDevice.pid,
+					deviceHistory.GetUsagePage(), deviceHistory.GetUsage());
+				reconnected = hoboHID.find_hid_device() && hoboHID.open();
+			}
+		}
+		break;
+		}
+
+		if (reconnected) {
 			KillTimer(m_msc_timer);
 			m_msc_timer = 0;
 			if (!m_enabled) {
@@ -243,20 +413,42 @@ void Cobserve_ime_wnd::OnTimer(UINT_PTR id) {
 	}
 }
 
-
-void Cobserve_ime_wnd::SetNotifyIcon(bool error) {
-	m_fErrorNotify = error;
-	NOTIFYICONDATA	nic;
+void Cobserve_ime_wnd::InitNotifyIconData(NOTIFYICONDATA& nic, bool error) {
 	memset(&nic, 0, sizeof(NOTIFYICONDATA));
 	nic.cbSize = sizeof(NOTIFYICONDATA);
 	nic.hWnd = m_hWnd;
 	nic.uID = IDI_ICON2;
-
 	nic.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
 	nic.uCallbackMessage = PM_SHELLNOTIFY;
 	nic.hIcon = error ? m_trayIcon2 : m_trayIcon;
 	_tcsncpy_s(nic.szTip, error ? tip_error : tip_working, sizeof(nic.szTip) / sizeof(TCHAR));
+}
+
+void Cobserve_ime_wnd::CloseCurrentNotifyDevice() {
+	switch (m_notifyMethod) {
+	case METHOD_MSC:
+		hoboMSC.close();
+		break;
+	case METHOD_HID:
+		hoboHID.close();
+		break;
+	case METHOD_LOCKKEY:
+		break;
+	}
+}
+
+void Cobserve_ime_wnd::SetNotifyIcon(bool error) {
+	m_fErrorNotify = error;
+	NOTIFYICONDATA nic;
+	InitNotifyIconData(nic, error);
 	m_fTrayIcon = Shell_NotifyIcon(NIM_ADD, &nic);
+}
+
+void Cobserve_ime_wnd::ChangeNotifyIcon(bool error) {
+	m_fErrorNotify = error;
+	NOTIFYICONDATA nic;
+	InitNotifyIconData(nic, error);
+	m_fTrayIcon = Shell_NotifyIcon(NIM_MODIFY, &nic);
 }
 
 void Cobserve_ime_wnd::DeleteNotifyIcon() {
@@ -269,28 +461,12 @@ void Cobserve_ime_wnd::DeleteNotifyIcon() {
 	m_fTrayIcon = false;
 }
 
-void Cobserve_ime_wnd::ChangeNotifyIcon(bool error) {
-	m_fErrorNotify = error;
-	NOTIFYICONDATA	nic;
-	memset(&nic, 0, sizeof(NOTIFYICONDATA));
-	nic.cbSize = sizeof(NOTIFYICONDATA);
-	nic.hWnd = m_hWnd;
-	nic.uID = IDI_ICON2;
-	nic.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
-	nic.uCallbackMessage = PM_SHELLNOTIFY;
-	nic.hIcon = error ? m_trayIcon2 : m_trayIcon;
-	_tcsncpy_s(nic.szTip, error ? tip_error : tip_working, sizeof(nic.szTip) / sizeof(TCHAR));
-	m_fTrayIcon = Shell_NotifyIcon(NIM_MODIFY, &nic);
-}
-
-
 afx_msg LRESULT Cobserve_ime_wnd::OnTaskbarRestart(WPARAM wp, LPARAM lp) {
 	if (m_fTrayIcon)
 		DeleteNotifyIcon();
 	SetNotifyIcon(m_fErrorNotify);
 	return 1;
 }
-
 
 afx_msg LRESULT Cobserve_ime_wnd::OnPmShellnotify(WPARAM wParam, LPARAM lParam)
 {
@@ -302,10 +478,13 @@ afx_msg LRESULT Cobserve_ime_wnd::OnPmShellnotify(WPARAM wParam, LPARAM lParam)
 			if (m_trayMenu) {
 				AppendMenu(m_trayMenu, MF_STRING, IDM_OBSERVING, _T("IME監視"));
 				AppendMenu(m_trayMenu, MF_SEPARATOR, 0, NULL);
-				AppendMenu(m_trayMenu, MF_STRING, IDM_VKSCROLL, _T("ScrLock"));
-				AppendMenu(m_trayMenu, MF_STRING, IDM_VKNUMLOCK, _T("NumLock"));
+				AppendMenu(m_trayMenu, MF_STRING, IDM_LOCKKEY_NOTIFY, _T("Use LockKey"));
+				AppendMenu(m_trayMenu, MF_STRING, IDM_VKSCROLL, _T("  ScrLock"));
+				AppendMenu(m_trayMenu, MF_STRING, IDM_VKNUMLOCK, _T("  NumLock"));
 				AppendMenu(m_trayMenu, MF_SEPARATOR, 0, NULL);
 				AppendMenu(m_trayMenu, MF_STRING, IDM_MSC_NOTIFY, _T("Use MSC"));
+				AppendMenu(m_trayMenu, MF_STRING, IDM_HID_NOTIFY, _T("Use HID"));
+				AppendMenu(m_trayMenu, MF_STRING, IDM_HID_SETTINGS, _T("HID Settings..."));
 				AppendMenu(m_trayMenu, MF_SEPARATOR, 0, NULL);
 				AppendMenu(m_trayMenu, MF_STRING, IDM_EXIT_APP, _T("終了"));
 			}
@@ -327,9 +506,7 @@ UINT Cobserve_ime_wnd::OnPowerBroadcast(UINT nPowerEvent, LPARAM nEventData)
 		KillTimer(m_timer_id);
 		m_timer_id = 0;
 		notify_keyboard(false);
-	}
-	else if (nPowerEvent == PBT_APMRESUMEAUTOMATIC) {
-		notify_keyboard(false);
+	} else if (nPowerEvent == PBT_APMRESUMEAUTOMATIC || nPowerEvent == PBT_APMRESUMESUSPEND) {
 		if (m_enabled && m_timer_id == 0)
 			m_timer_id = SetTimer(1, m_interval, NULL);
 	}
