@@ -22,8 +22,33 @@ observe_ime は、Windows の IME 状態（入力文字種）を検出し、hobo
 
 * USBHID による通知について
 	* hoboNicolaデバイスがバージョン 1.8.0 以降である必要があります。
-	* 通知対象のデバイスの ``USB情報(VID, PID)`` を設定する必要があります。usbtreeview などのツールやデバイスマネージャーで確認のこと。
+	* 通知対象のデバイスの **USB情報(VID, PID)** を設定する必要があります。usbtreeview などのツールやデバイスマネージャーで確認のこと。
 	* 同じVID/PIDのデバイスが複数接続されている場合、プログラムが見つけた最初のデバイスにのみ通知します。
+
+* USBHID用の設定ダイアログ
+
+  ![設定ダイアログ](assets/HID_Device_Settings.png)
+
+  * デバイス履歴リスト
+
+    VID, PIDに入力した内容の履歴を保持しています。リスト内で選択したVIDとPIDが有効になります。
+
+    OK クリックした時点でのVIDとPIDが有効ならば、その内容を履歴として記憶します。記憶する履歴は最大5つです。
+
+  * VID:
+
+    対象デバイスの Vendor IDを入力します。
+
+  * PID:
+
+    対象デバイスの Product IDを入力します。
+
+  * UsagePage および Usage
+
+    hoboNicolaライブラリ 1.8.0では UsagePageとして FF85、Usageとして 0051 を入力しておきます。
+
+
+
 
 ## 改版履歴
 * version 1.00 (2018/9/12)
