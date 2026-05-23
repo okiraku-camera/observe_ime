@@ -3,7 +3,7 @@
 #include "DeviceHistory.h"
 
 CDeviceHistory::CDeviceHistory() : lastUsedIndex(-1), usagePage(0x0001), usage(0x0006) {
-	registryKey = _T("Software\\hoboNicola\\observe_ime");
+	registryKey = _T("Software\\okiraku-camera\\observe_ime\\HID");
 }
 
 CDeviceHistory::~CDeviceHistory() {
@@ -70,7 +70,6 @@ void CDeviceHistory::SaveToRegistry() {
 		RegSetValueEx(hKey, _T("Usage"), 0, REG_DWORD, 
 		              (LPBYTE)&u, sizeof(DWORD));
 
-		// 現在の履歴を保存
 		for (int i = 0; i < history.GetCount() && i < MAX_HISTORY; i++) {
 			CString keyName;
 			keyName.Format(_T("Device%d"), i);
@@ -84,7 +83,6 @@ void CDeviceHistory::SaveToRegistry() {
 			              (LPBYTE)data, sizeof(data));
 		}
 		
-		// 削除された履歴のエントリをレジストリから削除
 		for (int i = (int)history.GetCount(); i < MAX_HISTORY; i++) {
 			CString keyName;
 			keyName.Format(_T("Device%d"), i);
@@ -110,7 +108,6 @@ void CDeviceHistory::AddDevice(const DeviceInfo& device) {
 		}
 	}
 
-	// constを外してコピーしてから追加
 	DeviceInfo deviceCopy = device;
 	history.InsertAt(0, deviceCopy);
 	lastUsedIndex = 0;
@@ -145,7 +142,6 @@ void CDeviceHistory::RemoveDevice(int index) {
 
 	history.RemoveAt(index);
 	
-	// lastUsedIndexを調整
 	if (lastUsedIndex == index) {
 		lastUsedIndex = (history.GetCount() > 0) ? 0 : -1;
 	} else if (lastUsedIndex > index) {
